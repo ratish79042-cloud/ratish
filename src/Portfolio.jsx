@@ -509,6 +509,7 @@ const Portfolio = ({ onNavigate }) => {
             <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tight">Credentials & <span className="bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">Badges</span></h2>
           </div>
 
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {displayedCerts.map(c => (
               <div key={c.id} className="bg-gradient-to-r from-[#0d0625] to-[#050214] border border-purple-500/10 rounded-2xl p-5 flex items-center gap-5 hover:border-purple-500/40 transition-all duration-300 group shadow-lg relative overflow-hidden">
