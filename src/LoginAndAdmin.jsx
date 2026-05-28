@@ -78,6 +78,7 @@ const ICON_DB = [
   { name: 'Illustrator', url: 'https://cdn.simpleicons.org/adobeillustrator' },
 ];
 
+// perumal
 // ── ICON AUTOCOMPLETE COMPONENT ──
 const IconInput = ({ value, onChange, placeholder }) => {
   const [suggestions, setSuggestions] = useState([]);
