@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Portfolio from './Portfolio';
-import LoginAndAdmin from './LoginAndAdmin'; 
+import LoginAndAdmin from './LoginandAdmin'; 
 
 function App() {
   const [currentPage, setCurrentPage] = useState(window.location.hash || '#/');
