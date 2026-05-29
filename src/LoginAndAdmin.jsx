@@ -864,13 +864,15 @@ function LoginAndAdmin({ onNavigate }) {
                 ))
               }
             </div>
-            <form onSubmit={handleCreateSkillFE} className="flex gap-2 pt-1">
-              <input type="text" placeholder="Skill Name" value={newSkillFE.name} onChange={e => setNewSkillFE({ ...newSkillFE, name: e.target.value })} className="w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
+            <form onSubmit={handleCreateSkillFE} className="flex flex-col sm:flex-row gap-2 pt-1">
+              <input type="text" placeholder="Skill Name" value={newSkillFE.name} onChange={e => setNewSkillFE({ ...newSkillFE, name: e.target.value })} className="w-full sm:w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
               <IconInput value={newSkillFE.icon} onChange={(val) => setNewSkillFE({ ...newSkillFE, icon: val })} placeholder="Type skill name for icon..." />
-              <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white font-bold px-4 rounded-lg shrink-0">{editingSkillFE ? 'Save' : 'Add'}</button>
-              {editingSkillFE && (
-                <button type="button" onClick={() => { setEditingSkillFE(null); setNewSkillFE({ name: '', icon: '' }); toast.info('Cancelled skill edit'); }} className="bg-purple-950 text-purple-300 hover:bg-purple-900 border border-purple-800 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
-              )}
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <button type="submit" className="flex-1 sm:flex-initial bg-purple-700 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shrink-0">{editingSkillFE ? 'Save' : 'Add'}</button>
+                {editingSkillFE && (
+                  <button type="button" onClick={() => { setEditingSkillFE(null); setNewSkillFE({ name: '', icon: '' }); toast.info('Cancelled skill edit'); }} className="bg-purple-950 text-purple-300 hover:bg-purple-900 border border-purple-800 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -901,13 +903,15 @@ function LoginAndAdmin({ onNavigate }) {
                 ))
               }
             </div>
-            <form onSubmit={handleCreateSkillTool} className="flex gap-2 pt-1">
-              <input type="text" placeholder="Tool Name" value={newSkillTool.name} onChange={e => setNewSkillTool({ ...newSkillTool, name: e.target.value })} className="w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
+            <form onSubmit={handleCreateSkillTool} className="flex flex-col sm:flex-row gap-2 pt-1">
+              <input type="text" placeholder="Tool Name" value={newSkillTool.name} onChange={e => setNewSkillTool({ ...newSkillTool, name: e.target.value })} className="w-full sm:w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
               <IconInput value={newSkillTool.icon} onChange={(val) => setNewSkillTool({ ...newSkillTool, icon: val })} placeholder="Type tool name for icon..." />
-              <button type="submit" className="bg-indigo-700 hover:bg-indigo-600 text-white font-bold px-4 rounded-lg shrink-0">{editingSkillTool ? 'Save' : 'Add'}</button>
-              {editingSkillTool && (
-                <button type="button" onClick={() => { setEditingSkillTool(null); setNewSkillTool({ name: '', icon: '' }); toast.info('Cancelled tool edit'); }} className="bg-indigo-950 text-indigo-300 hover:bg-indigo-900 border border-indigo-800 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
-              )}
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <button type="submit" className="flex-1 sm:flex-initial bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shrink-0">{editingSkillTool ? 'Save' : 'Add'}</button>
+                {editingSkillTool && (
+                  <button type="button" onClick={() => { setEditingSkillTool(null); setNewSkillTool({ name: '', icon: '' }); toast.info('Cancelled tool edit'); }} className="bg-indigo-950 text-indigo-300 hover:bg-indigo-900 border border-indigo-800 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -938,13 +942,15 @@ function LoginAndAdmin({ onNavigate }) {
                 ))
               }
             </div>
-            <form onSubmit={handleCreateSkillOther} className="flex gap-2 pt-1">
-              <input type="text" placeholder="Skill Name" value={newSkillOther.name} onChange={e => setNewSkillOther({ ...newSkillOther, name: e.target.value })} className="w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
+            <form onSubmit={handleCreateSkillOther} className="flex flex-col sm:flex-row gap-2 pt-1">
+              <input type="text" placeholder="Skill Name" value={newSkillOther.name} onChange={e => setNewSkillOther({ ...newSkillOther, name: e.target.value })} className="w-full sm:w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
               <IconInput value={newSkillOther.icon} onChange={(val) => setNewSkillOther({ ...newSkillOther, icon: val })} placeholder="Type skill name for icon..." />
-              <button type="submit" className="bg-pink-700 hover:bg-pink-600 text-white font-bold px-4 rounded-lg shrink-0">{editingSkillOther ? 'Save' : 'Add'}</button>
-              {editingSkillOther && (
-                <button type="button" onClick={() => { setEditingSkillOther(null); setNewSkillOther({ name: '', icon: '' }); toast.info('Cancelled skill edit'); }} className="bg-[#1f0e2a] text-pink-300 hover:bg-[#2c133a] border border-pink-900 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
-              )}
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <button type="submit" className="flex-1 sm:flex-initial bg-pink-700 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-lg shrink-0">{editingSkillOther ? 'Save' : 'Add'}</button>
+                {editingSkillOther && (
+                  <button type="button" onClick={() => { setEditingSkillOther(null); setNewSkillOther({ name: '', icon: '' }); toast.info('Cancelled skill edit'); }} className="bg-[#1f0e2a] text-pink-300 hover:bg-[#2c133a] border border-pink-900 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
+                )}
+              </div>
             </form>
           </div>
         </div>
