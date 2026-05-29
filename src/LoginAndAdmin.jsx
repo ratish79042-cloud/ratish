@@ -561,7 +561,7 @@ function LoginAndAdmin({ onNavigate }) {
           body: JSON.stringify(newCert)
         });
       }
-      
+
       if (resp.ok) {
         toast.success(editingCertificate ? 'Certificate changes saved successfully!' : 'Verification badge published to client registry!');
         setNewCert({ title: '', issuer: '', date: '', skillTag: '', certImage: '', certFile: '', certFileName: '', certMime: '' });
@@ -569,7 +569,7 @@ function LoginAndAdmin({ onNavigate }) {
         setCertFileName('');
         setCertFileMime('');
         setEditingCertificate(null);
-        
+
         // Refresh local certificates list!
         const getCertResp = await fetch(`${API_BASE}/certificates`);
         if (getCertResp.ok) setCertificates(await getCertResp.json());

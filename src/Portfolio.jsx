@@ -17,9 +17,9 @@ const Portfolio = ({ onNavigate }) => {
   });
 
   const [profile, setProfile] = useState({
-    name: 'Ratish G T',
-    role: 'Frontend Developer',
-    stat1: '3+', stat2: 'Good', stat3: '20+', stat4: 'Good',
+    name: '',
+    role: '',
+    stat1: '', stat2: '', stat3: '', stat4: '',
     photoFile: '', resumeFile: ''
   });
   const [dbProjects, setDbProjects] = useState([]);
@@ -28,41 +28,7 @@ const Portfolio = ({ onNavigate }) => {
   const [dbSkillsTools, setDbSkillsTools] = useState([]);
   const [dbSkillsOthers, setDbSkillsOthers] = useState([]);
 
-  // Static fallback data
-  const localProjects = [
-    { id: 'p1', title: 'Taskify - Task Manager', desc: 'A modern task management application to organize your daily tasks and boost productivity.', tags: ['React', 'Tailwind CSS', 'Firebase'], category: 'React', githubUrl: 'https://github.com/ratish79042-cloud', demoUrl: '#', image: '' },
-    { id: 'p2', title: 'Melody - Music Player', desc: 'A beautiful music player with playlist, dark mode and smooth animations.', tags: ['React', 'Redux', 'Tailwind CSS'], category: 'React', githubUrl: 'https://github.com/ratish79042-cloud', demoUrl: '#', image: '' },
-    { id: 'p3', title: 'Shopper - E-Commerce', desc: 'A full-featured e-commerce website with cart, checkout and payment integration.', tags: ['React', 'Tailwind CSS', 'Stripe'], category: 'Web Apps', githubUrl: 'https://github.com/ratish79042-cloud', demoUrl: '#', image: '' },
-  ];
-  const localCerts = [
-    { id: 'c1', title: 'React Developer Certificate', issuer: 'Meta', date: 'Issued: May 2024', certImage: '', skillTag: 'Frontend Architecture' },
-    { id: 'c2', title: 'JavaScript Algorithms and Data Structures', issuer: 'freeCodeCamp', date: 'Issued: Feb 2024', certImage: '', skillTag: 'Data Structures & Logic' },
-    { id: 'c3', title: 'Responsive Web Design Certificate', issuer: 'freeCodeCamp', date: 'Issued: Dec 2023', certImage: '', skillTag: 'CSS & UI' },
-    { id: 'c4', title: 'UI/UX Design Specialization', issuer: 'Coursera', date: 'Issued: Oct 2023', certImage: '', skillTag: 'Figma & UX' },
-  ];
-  const localSkillsFrontend = [
-    { id: 's1', name: 'React', icon: '⚛️' },
-    { id: 's2', name: 'Tailwind CSS', icon: '🌊' },
-    { id: 's3', name: 'JavaScript', icon: '🟨' },
-    { id: 's4', name: 'HTML', icon: '🧱' },
-    { id: 's5', name: 'CSS', icon: '🎨' },
-  ];
-  const localSkillsTools = [
-    { id: 't1', name: 'Git', icon: '🔴' },
-    { id: 't2', name: 'GitHub', icon: '⚫' },
-    { id: 't3', name: 'VS Code', icon: '🔵' },
-    { id: 't4', name: 'Figma', icon: '🎯' },
-    { id: 't5', name: 'Excel', icon: '🟩' },
-    { id: 't6', name: 'Word', icon: '🔷' },
-  ];
-  const localOtherSkills = [
-    { id: 'o1', name: 'Problem Solving', icon: '💬' },
-    { id: 'o2', name: 'Analytical Thinking', icon: '💡' },
-    { id: 'o3', name: 'Attention to Detail', icon: '🎯' },
-    { id: 'o4', name: 'Good Communication', icon: '🤝' },
-    { id: 'o5', name: 'Time Management', icon: '🕐' },
-    { id: 'o6', name: 'Quick Learner', icon: '🚀' },
-  ];
+
 
   const markLoaded = (key) =>
     setLoadedFlags(prev => ({ ...prev, [key]: true }));
@@ -164,28 +130,11 @@ const Portfolio = ({ onNavigate }) => {
     };
   }, []);
 
-  // KEY FIX: loaded flag true ஆனப்பறமே decide பண்றோம்
-  // Firebase empty => localFallback, Firebase data இருந்தா => அதை காட்டு
-  // loaded false-ஆ இருக்கும்போது => localFallback (flicker தவிர்க்க)
-  const displayedProjects = loadedFlags.projects
-    ? (dbProjects.length > 0 ? dbProjects : localProjects)
-    : localProjects;
-
-  const displayedCerts = loadedFlags.certs
-    ? (dbCerts.length > 0 ? dbCerts : localCerts)
-    : localCerts;
-
-  const displayedFrontend = loadedFlags.frontend
-    ? (dbSkillsFrontend.length > 0 ? dbSkillsFrontend : localSkillsFrontend)
-    : localSkillsFrontend;
-
-  const displayedTools = loadedFlags.tools
-    ? (dbSkillsTools.length > 0 ? dbSkillsTools : localSkillsTools)
-    : localSkillsTools;
-
-  const displayedOthers = loadedFlags.others
-    ? (dbSkillsOthers.length > 0 ? dbSkillsOthers : localOtherSkills)
-    : localOtherSkills;
+  const displayedProjects = dbProjects;
+  const displayedCerts = dbCerts;
+  const displayedFrontend = dbSkillsFrontend;
+  const displayedTools = dbSkillsTools;
+  const displayedOthers = dbSkillsOthers;
 
   const filteredProjects = activeCategory === 'All'
     ? displayedProjects
