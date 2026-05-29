@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db } from './firebaseConfig';
-import { collection, doc, onSnapshot, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { API_BASE } from './config';
+import { Toaster, toast } from 'sonner';
 // perumal test
 // ── MASTER ICON DATABASE ──
 const ICON_DB = [
@@ -292,39 +292,75 @@ function LoginAndAdmin({ onNavigate }) {
   const [newSkillTool, setNewSkillTool] = useState({ name: '', icon: '' });
   const [newSkillOther, setNewSkillOther] = useState({ name: '', icon: '' });
 
+  // --- Edit states ---
+  const [editingProject, setEditingProject] = useState(null);
+  const [editingCertificate, setEditingCertificate] = useState(null);
+  const [editingSkillFE, setEditingSkillFE] = useState(null);
+  const [editingSkillTool, setEditingSkillTool] = useState(null);
+  const [editingSkillOther, setEditingSkillOther] = useState(null);
+
   useEffect(() => {
     if (!isLoggedIn) return;
-    const unsubProfile = onSnapshot(doc(db, 'meta', 'profile'), (snap) => {
-      if (snap.exists()) setProfile(prev => ({ ...prev, ...snap.data() }));
-    });
-    const unsubProjects = onSnapshot(collection(db, 'projects'), (snap) => {
-      setProjects(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    const unsubCerts = onSnapshot(collection(db, 'certificates'), (snap) => {
-      setCertificates(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    const unsubFE = onSnapshot(collection(db, 'skills_frontend'), (snap) => {
-      setSkillsFrontend(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    const unsubTools = onSnapshot(collection(db, 'skills_tools'), (snap) => {
-      setSkillsTools(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    const unsubOthers = onSnapshot(collection(db, 'skills_others'), (snap) => {
-      setSkillsOthers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    return () => {
-      unsubProfile(); unsubProjects(); unsubCerts();
-      unsubFE(); unsubTools(); unsubOthers();
-    };
+    // API_BASE is imported from ./config
+
+    // Fetch profile
+    fetch(`${API_BASE}/profile`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setProfile(data))
+      .catch(err => console.error("Error fetching profile:", err));
+
+    // Fetch projects
+    fetch(`${API_BASE}/projects`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setProjects(data))
+      .catch(err => console.error("Error fetching projects:", err));
+
+    // Fetch certs
+    fetch(`${API_BASE}/certificates`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setCertificates(data))
+      .catch(err => console.error("Error fetching certificates:", err));
+
+    // Fetch FE skills
+    fetch(`${API_BASE}/skills/frontend`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setSkillsFrontend(data))
+      .catch(err => console.error("Error fetching frontend skills:", err));
+
+    // Fetch Tools skills
+    fetch(`${API_BASE}/skills/tools`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setSkillsTools(data))
+      .catch(err => console.error("Error fetching tools skills:", err));
+
+    // Fetch Others skills
+    fetch(`${API_BASE}/skills/others`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setSkillsOthers(data))
+      .catch(err => console.error("Error fetching other skills:", err));
   }, [isLoggedIn]);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (username === 'Ratish' && password === 'Ratish@302') {
-      setIsLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Invalid Username or Password');
+    try {
+      const resp = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        localStorage.setItem('admin_token', data.access_token);
+        setIsLoggedIn(true);
+        setLoginError('');
+        toast.success('Authorized access granted! Secure terminal unlocked.');
+      } else {
+        setLoginError('Invalid Username or Password');
+        toast.error('Access Crypt verification failed!');
+      }
+    } catch (err) {
+      setLoginError('Could not connect to authentication server');
+      toast.error('Terminal network connection failure!');
     }
   };
 
@@ -345,8 +381,16 @@ function LoginAndAdmin({ onNavigate }) {
       const base64Data = await processFileToBase64(targetFile);
       const updatedProfile = { ...profile, [fieldType]: base64Data };
       setProfile(updatedProfile);
-      await setDoc(doc(db, 'meta', 'profile'), updatedProfile);
-      alert(`${fieldType === 'photoFile' ? 'Profile Avatar Photo' : 'Resume PDF'} synced to Live Cloud Database!`);
+
+      await fetch(`${API_BASE}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify(updatedProfile)
+      });
+      toast.success(`${fieldType === 'photoFile' ? 'Profile Avatar Photo' : 'Resume PDF'} synced to Live PostgreSQL Database!`);
     } catch (err) {
       console.error('Profile file upload error:', err);
     }
@@ -404,27 +448,70 @@ function LoginAndAdmin({ onNavigate }) {
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
-      await setDoc(doc(db, 'meta', 'profile'), profile);
-      alert('Live Identity Matrix updated inside Firestore database successfully!');
+      const resp = await fetch(`${API_BASE}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify(profile)
+      });
+      if (resp.ok) {
+        toast.success('Identity matrix updated inside PostgreSQL database successfully!');
+      } else {
+        toast.error('Failed to update profile.');
+      }
     } catch (error) {
       console.error('Profile update failed:', error);
     }
   };
 
-  // ── Create project ──
+  // ── Create/Update project ──
   const handleCreateProject = async (e) => {
     e.preventDefault();
     try {
       const formattedTags = typeof newProj.tags === 'string'
         ? newProj.tags.split(',').map(t => t.trim()).filter(t => t !== '')
         : [];
-      await addDoc(collection(db, 'projects'), { ...newProj, tags: formattedTags });
-      alert('Application card node deployed to cloud storage!');
-      setNewProj({ title: '', desc: '', tags: '', category: 'React', githubUrl: '', demoUrl: '', projectImage: '' });
-      setProjImagePreview('');
-      setProjImageFileName('');
+      const projectPayload = { ...newProj, tags: formattedTags };
+
+      let resp;
+      if (editingProject) {
+        resp = await fetch(`${API_BASE}/projects/${editingProject.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: JSON.stringify(projectPayload)
+        });
+      } else {
+        resp = await fetch(`${API_BASE}/projects`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: JSON.stringify(projectPayload)
+        });
+      }
+
+      if (resp.ok) {
+        toast.success(editingProject ? 'Project changes saved successfully!' : 'Application card node deployed successfully!');
+        setNewProj({ title: '', desc: '', tags: '', category: 'React', githubUrl: '', demoUrl: '', projectImage: '' });
+        setProjImagePreview('');
+        setProjImageFileName('');
+        setEditingProject(null);
+
+        // Refresh local projects list!
+        const getProjResp = await fetch(`${API_BASE}/projects`);
+        if (getProjResp.ok) setProjects(await getProjResp.json());
+      } else {
+        toast.error('Failed to deploy project.');
+      }
     } catch (error) {
       console.error('Project creation error:', error);
+      toast.error('Failed to complete project action.');
     }
   };
 
@@ -432,26 +519,66 @@ function LoginAndAdmin({ onNavigate }) {
   const handleDeleteProject = async (id) => {
     if (window.confirm('Delete this project card from live production server? This cannot be undone.')) {
       try {
-        await deleteDoc(doc(db, 'projects', id));
-        alert('Project card deleted successfully.');
+        const resp = await fetch(`${API_BASE}/projects/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          }
+        });
+        if (resp.ok) {
+          toast.success('Project card deleted successfully.');
+          setProjects(prev => prev.filter(p => p.id !== id));
+        } else {
+          toast.error('Failed to delete project.');
+        }
       } catch (error) {
         console.error('Project delete error:', error);
       }
     }
   };
 
-  // ── Create certificate ──
+  // ── Create/Update certificate ──
   const handleCreateCertificate = async (e) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'certificates'), newCert);
-      alert('Verification badge published to client registry!');
-      setNewCert({ title: '', issuer: '', date: '', skillTag: '', certImage: '', certFile: '' });
-      setCertFilePreview('');
-      setCertFileName('');
-      setCertFileMime('');
+      let resp;
+      if (editingCertificate) {
+        resp = await fetch(`${API_BASE}/certificates/${editingCertificate.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: JSON.stringify(newCert)
+        });
+      } else {
+        resp = await fetch(`${API_BASE}/certificates`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: JSON.stringify(newCert)
+        });
+      }
+      
+      if (resp.ok) {
+        toast.success(editingCertificate ? 'Certificate changes saved successfully!' : 'Verification badge published to client registry!');
+        setNewCert({ title: '', issuer: '', date: '', skillTag: '', certImage: '', certFile: '', certFileName: '', certMime: '' });
+        setCertFilePreview('');
+        setCertFileName('');
+        setCertFileMime('');
+        setEditingCertificate(null);
+        
+        // Refresh local certificates list!
+        const getCertResp = await fetch(`${API_BASE}/certificates`);
+        if (getCertResp.ok) setCertificates(await getCertResp.json());
+      } else {
+        toast.error('Failed to deploy certificate.');
+      }
     } catch (error) {
       console.error('Certificate creation error:', error);
+      toast.error('Failed to complete certificate action.');
     }
   };
 
@@ -459,8 +586,18 @@ function LoginAndAdmin({ onNavigate }) {
   const handleDeleteCertificate = async (id) => {
     if (window.confirm('Permanently delete this certificate from the database? This cannot be undone.')) {
       try {
-        await deleteDoc(doc(db, 'certificates', id));
-        alert('Certificate deleted successfully.');
+        const resp = await fetch(`${API_BASE}/certificates/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          }
+        });
+        if (resp.ok) {
+          toast.success('Certificate deleted successfully.');
+          setCertificates(prev => prev.filter(c => c.id !== id));
+        } else {
+          toast.error('Failed to delete certificate.');
+        }
       } catch (error) {
         console.error('Certificate delete error:', error);
       }
@@ -469,35 +606,117 @@ function LoginAndAdmin({ onNavigate }) {
 
   const handleCreateSkillFE = async (e) => {
     e.preventDefault();
-    try { await addDoc(collection(db, 'skills_frontend'), newSkillFE); setNewSkillFE({ name: '', icon: '' }); }
-    catch (error) { console.error(error); }
+    try {
+      const resp = await fetch(`${API_BASE}/skills`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify({ ...newSkillFE, category: 'frontend' })
+      });
+      if (resp.ok) {
+        setNewSkillFE({ name: '', icon: '' });
+        const getResp = await fetch('http://127.0.0.1:8000/api/skills/frontend');
+        if (getResp.ok) setSkillsFrontend(await getResp.json());
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
   const handleDeleteSkillFE = async (id) => {
-    if (window.confirm('Delete this skill?')) await deleteDoc(doc(db, 'skills_frontend', id));
+    if (window.confirm('Delete this skill?')) {
+      try {
+        const resp = await fetch(`${API_BASE}/skills/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          }
+        });
+        if (resp.ok) { setSkillsFrontend(prev => prev.filter(s => s.id !== id)); toast.success('Skill deleted.'); }
+      } catch (error) {
+        console.error(error);
+      }
+    }
   };
 
   const handleCreateSkillTool = async (e) => {
     e.preventDefault();
-    try { await addDoc(collection(db, 'skills_tools'), newSkillTool); setNewSkillTool({ name: '', icon: '' }); }
-    catch (error) { console.error(error); }
+    try {
+      const resp = await fetch(`${API_BASE}/skills`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify({ ...newSkillTool, category: 'tools' })
+      });
+      if (resp.ok) {
+        setNewSkillTool({ name: '', icon: '' });
+        const getResp = await fetch('http://127.0.0.1:8000/api/skills/tools');
+        if (getResp.ok) setSkillsTools(await getResp.json());
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
   const handleDeleteSkillTool = async (id) => {
-    if (window.confirm('Delete this tool?')) await deleteDoc(doc(db, 'skills_tools', id));
+    if (window.confirm('Delete this tool?')) {
+      try {
+        const resp = await fetch(`${API_BASE}/skills/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          }
+        });
+        if (resp.ok) { setSkillsTools(prev => prev.filter(t => t.id !== id)); toast.success('Tool deleted.'); }
+      } catch (error) {
+        console.error(error);
+      }
+    }
   };
 
   const handleCreateSkillOther = async (e) => {
     e.preventDefault();
-    try { await addDoc(collection(db, 'skills_others'), newSkillOther); setNewSkillOther({ name: '', icon: '' }); }
-    catch (error) { console.error(error); }
+    try {
+      const resp = await fetch(`${API_BASE}/skills`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify({ ...newSkillOther, category: 'others' })
+      });
+      if (resp.ok) {
+        setNewSkillOther({ name: '', icon: '' });
+        const getResp = await fetch('http://127.0.0.1:8000/api/skills/others');
+        if (getResp.ok) setSkillsOthers(await getResp.json());
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
   const handleDeleteSkillOther = async (id) => {
-    if (window.confirm('Delete this specialization?')) await deleteDoc(doc(db, 'skills_others', id));
+    if (window.confirm('Delete this specialization?')) {
+      try {
+        const resp = await fetch(`${API_BASE}/skills/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          }
+        });
+        if (resp.ok) { setSkillsOthers(prev => prev.filter(s => s.id !== id)); toast.success('Skill deleted.'); }
+      } catch (error) {
+        console.error(error);
+      }
+    }
   };
 
   // ── LOGIN PAGE ──
   if (!isLoggedIn) {
     return (
       <div className="bg-[#030014] text-white min-h-screen flex items-center justify-center p-6">
+        <Toaster position="top-right" richColors theme="dark" />
         <div className="bg-[#0d0625]/90 border border-purple-500/30 p-8 rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-pink-500" />
           <div className="text-center mb-6">
@@ -530,6 +749,7 @@ function LoginAndAdmin({ onNavigate }) {
   // ── ADMIN PANEL ──
   return (
     <div className="bg-[#030014] text-white min-h-screen p-6 lg:p-12 font-sans space-y-12 pb-24">
+      <Toaster position="top-right" richColors theme="dark" />
 
       {/* HEADER */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-900/40 pb-6">
@@ -541,7 +761,11 @@ function LoginAndAdmin({ onNavigate }) {
           <button onClick={() => onNavigate('#/')} className="bg-[#0d0625] border border-purple-900/60 hover:border-purple-500 text-gray-300 px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
             Public Portfolio View 🌐
           </button>
-          <button onClick={() => setIsLoggedIn(false)} className="bg-rose-950/40 border border-rose-900/60 hover:bg-rose-900/60 text-rose-400 text-xs font-bold px-4 py-2.5 rounded-xl transition-all">
+          <button onClick={() => {
+            localStorage.removeItem('admin_token');
+            setIsLoggedIn(false);
+            toast.info('Secure lockout engaged. Terminal session closed.');
+          }} className="bg-rose-950/40 border border-rose-900/60 hover:bg-rose-900/60 text-rose-400 text-xs font-bold px-4 py-2.5 rounded-xl transition-all">
             Secure Lockout 🔒
           </button>
         </div>
@@ -626,7 +850,15 @@ function LoginAndAdmin({ onNavigate }) {
                         ? <img src={s.icon} alt="" className="w-full h-full object-contain" />
                         : <span className="text-sm">{s.icon}</span>}
                     </div>
-                    <span>{s.name}</span>
+                    <span
+                      className="cursor-pointer hover:underline hover:text-purple-300"
+                      onClick={() => {
+                        setEditingSkillFE(s);
+                        setNewSkillFE({ name: s.name, icon: s.icon || '' });
+                        toast.info(`Editing frontend skill: "${s.name}"`);
+                      }}
+                      title="Click to edit skill"
+                    >{s.name} ✏️</span>
                     <button onClick={() => handleDeleteSkillFE(s.id)} className="text-rose-400 hover:text-rose-600 ml-1 font-bold text-xs">×</button>
                   </div>
                 ))
@@ -635,7 +867,10 @@ function LoginAndAdmin({ onNavigate }) {
             <form onSubmit={handleCreateSkillFE} className="flex gap-2 pt-1">
               <input type="text" placeholder="Skill Name" value={newSkillFE.name} onChange={e => setNewSkillFE({ ...newSkillFE, name: e.target.value })} className="w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
               <IconInput value={newSkillFE.icon} onChange={(val) => setNewSkillFE({ ...newSkillFE, icon: val })} placeholder="Type skill name for icon..." />
-              <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white font-bold px-4 rounded-lg shrink-0">Add</button>
+              <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white font-bold px-4 rounded-lg shrink-0">{editingSkillFE ? 'Save' : 'Add'}</button>
+              {editingSkillFE && (
+                <button type="button" onClick={() => { setEditingSkillFE(null); setNewSkillFE({ name: '', icon: '' }); toast.info('Cancelled skill edit'); }} className="bg-purple-950 text-purple-300 hover:bg-purple-900 border border-purple-800 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
+              )}
             </form>
           </div>
 
@@ -652,7 +887,15 @@ function LoginAndAdmin({ onNavigate }) {
                         ? <img src={t.icon} alt="" className="w-full h-full object-contain" />
                         : <span className="text-sm">{t.icon}</span>}
                     </div>
-                    <span>{t.name}</span>
+                    <span
+                      className="cursor-pointer hover:underline hover:text-indigo-300"
+                      onClick={() => {
+                        setEditingSkillTool(t);
+                        setNewSkillTool({ name: t.name, icon: t.icon || '' });
+                        toast.info(`Editing tool: "${t.name}"`);
+                      }}
+                      title="Click to edit tool"
+                    >{t.name} ✏️</span>
                     <button onClick={() => handleDeleteSkillTool(t.id)} className="text-rose-400 hover:text-rose-600 ml-1 font-bold text-xs">×</button>
                   </div>
                 ))
@@ -661,7 +904,10 @@ function LoginAndAdmin({ onNavigate }) {
             <form onSubmit={handleCreateSkillTool} className="flex gap-2 pt-1">
               <input type="text" placeholder="Tool Name" value={newSkillTool.name} onChange={e => setNewSkillTool({ ...newSkillTool, name: e.target.value })} className="w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
               <IconInput value={newSkillTool.icon} onChange={(val) => setNewSkillTool({ ...newSkillTool, icon: val })} placeholder="Type tool name for icon..." />
-              <button type="submit" className="bg-indigo-700 hover:bg-indigo-600 text-white font-bold px-4 rounded-lg shrink-0">Add</button>
+              <button type="submit" className="bg-indigo-700 hover:bg-indigo-600 text-white font-bold px-4 rounded-lg shrink-0">{editingSkillTool ? 'Save' : 'Add'}</button>
+              {editingSkillTool && (
+                <button type="button" onClick={() => { setEditingSkillTool(null); setNewSkillTool({ name: '', icon: '' }); toast.info('Cancelled tool edit'); }} className="bg-indigo-950 text-indigo-300 hover:bg-indigo-900 border border-indigo-800 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
+              )}
             </form>
           </div>
 
@@ -678,7 +924,15 @@ function LoginAndAdmin({ onNavigate }) {
                         ? <img src={o.icon} alt="" className="w-full h-full object-contain" />
                         : <span className="text-sm">{o.icon}</span>}
                     </div>
-                    <span>{o.name}</span>
+                    <span
+                      className="cursor-pointer hover:underline hover:text-pink-300"
+                      onClick={() => {
+                        setEditingSkillOther(o);
+                        setNewSkillOther({ name: o.name, icon: o.icon || '' });
+                        toast.info(`Editing skill: "${o.name}"`);
+                      }}
+                      title="Click to edit skill"
+                    >{o.name} ✏️</span>
                     <button onClick={() => handleDeleteSkillOther(o.id)} className="text-rose-400 hover:text-rose-600 ml-1 font-bold text-xs">×</button>
                   </div>
                 ))
@@ -687,7 +941,10 @@ function LoginAndAdmin({ onNavigate }) {
             <form onSubmit={handleCreateSkillOther} className="flex gap-2 pt-1">
               <input type="text" placeholder="Skill Name" value={newSkillOther.name} onChange={e => setNewSkillOther({ ...newSkillOther, name: e.target.value })} className="w-36 bg-[#030014] border border-purple-950 rounded-lg p-2 text-white shrink-0" required />
               <IconInput value={newSkillOther.icon} onChange={(val) => setNewSkillOther({ ...newSkillOther, icon: val })} placeholder="Type skill name for icon..." />
-              <button type="submit" className="bg-pink-700 hover:bg-pink-600 text-white font-bold px-4 rounded-lg shrink-0">Add</button>
+              <button type="submit" className="bg-pink-700 hover:bg-pink-600 text-white font-bold px-4 rounded-lg shrink-0">{editingSkillOther ? 'Save' : 'Add'}</button>
+              {editingSkillOther && (
+                <button type="button" onClick={() => { setEditingSkillOther(null); setNewSkillOther({ name: '', icon: '' }); toast.info('Cancelled skill edit'); }} className="bg-[#1f0e2a] text-pink-300 hover:bg-[#2c133a] border border-pink-900 font-bold px-2.5 rounded-lg shrink-0 text-[10px]">✕</button>
+              )}
             </form>
           </div>
         </div>
@@ -704,7 +961,24 @@ function LoginAndAdmin({ onNavigate }) {
           </h3>
 
           <form onSubmit={handleCreateProject} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-[#070314] p-4 rounded-2xl border border-purple-950">
-            <div className="md:col-span-2 text-[10px] text-purple-400 font-black uppercase tracking-wider">Create New App Card Node</div>
+            <div className="md:col-span-2 text-[10px] text-purple-400 font-black uppercase tracking-wider flex items-center justify-between">
+              <span>{editingProject ? `Edit App Card Node (ID: ${editingProject.id})` : 'Create New App Card Node'}</span>
+              {editingProject && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProject(null);
+                    setNewProj({ title: '', desc: '', tags: '', category: 'React', githubUrl: '', demoUrl: '', projectImage: '' });
+                    setProjImagePreview('');
+                    setProjImageFileName('');
+                    toast.info('Cancelled project editing');
+                  }}
+                  className="text-[9px] bg-purple-950 border border-purple-800 text-purple-300 font-bold px-2 py-0.5 rounded cursor-pointer"
+                >
+                  Cancel Edit ✕
+                </button>
+              )}
+            </div>
 
             <div>
               <label className="block text-gray-400 mb-1">Project Deck Title</label>
@@ -746,14 +1020,14 @@ function LoginAndAdmin({ onNavigate }) {
                 onFileChange={handleProjImageFileChange}
                 onClear={clearProjImage}
                 urlValue={projImagePreview ? '' : newProj.projectImage}
-                onUrlChange={(val) => setNewProj(prev => ({ ...prev, projectImage: val }))}
+                onUrlChange={(val) => { setNewProj(prev => ({ ...prev, projectImage: val })); setProjImagePreview(val); }}
                 accentColor="purple"
               />
             </div>
 
             <div className="md:col-span-2 pt-2">
               <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-all uppercase tracking-wider">
-                Deploy Dynamic Project Node
+                {editingProject ? 'Save Project Changes' : 'Deploy Dynamic Project Node'}
               </button>
             </div>
           </form>
@@ -768,12 +1042,37 @@ function LoginAndAdmin({ onNavigate }) {
                     <div className="w-full">
                       <div className="flex justify-between items-center w-full">
                         <span className="text-[10px] bg-purple-950 text-purple-400 border border-purple-900/50 font-bold px-2 py-0.5 rounded">{p.category}</span>
-                        <button
-                          onClick={() => handleDeleteProject(p.id)}
-                          className="bg-rose-950/40 border border-rose-900/60 text-rose-400 hover:bg-rose-900/60 text-xs font-bold px-2 py-0.5 rounded-lg transition-colors"
-                        >
-                          Delete ×
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingProject(p);
+                              setNewProj({
+                                title: p.title,
+                                desc: p.desc,
+                                tags: Array.isArray(p.tags) ? p.tags.join(', ') : p.tags,
+                                category: p.category,
+                                githubUrl: p.githubUrl || '',
+                                demoUrl: p.demoUrl || '',
+                                projectImage: p.projectImage || ''
+                              });
+                              setProjImagePreview(p.projectImage || '');
+                              setProjImageFileName('');
+                              toast.info(`Editing project: "${p.title}"`);
+                              document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="bg-purple-950/40 border border-purple-900/60 text-purple-400 hover:bg-purple-900/60 text-xs font-bold px-2.5 py-0.5 rounded-lg transition-colors"
+                          >
+                            Edit 📝
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProject(p.id)}
+                            className="bg-rose-950/40 border border-rose-900/60 text-rose-400 hover:bg-rose-900/60 text-xs font-bold px-2 py-0.5 rounded-lg transition-colors"
+                          >
+                            Delete ×
+                          </button>
+                        </div>
                       </div>
                       <h4 className="text-sm font-bold text-white mt-2 truncate w-full tracking-wide">{p.title}</h4>
                       <p className="text-gray-500 text-xs line-clamp-2 mt-0.5 leading-relaxed">{p.desc}</p>
@@ -793,7 +1092,25 @@ function LoginAndAdmin({ onNavigate }) {
           </h3>
 
           <form onSubmit={handleCreateCertificate} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-[#070314] p-4 rounded-2xl border border-purple-950">
-            <div className="md:col-span-2 text-[10px] text-indigo-400 font-black uppercase tracking-wider">Deploy New Achievement Badge</div>
+            <div className="md:col-span-2 text-[10px] text-indigo-400 font-black uppercase tracking-wider flex items-center justify-between">
+              <span>{editingCertificate ? `Edit Achievement Badge (ID: ${editingCertificate.id})` : 'Deploy New Achievement Badge'}</span>
+              {editingCertificate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCertificate(null);
+                    setNewCert({ title: '', issuer: '', date: '', skillTag: '', certImage: '', certFile: '' });
+                    setCertFilePreview('');
+                    setCertFileName('');
+                    setCertFileMime('');
+                    toast.info('Cancelled certificate editing');
+                  }}
+                  className="text-[9px] bg-indigo-950 border border-indigo-800 text-indigo-300 font-bold px-2 py-0.5 rounded cursor-pointer"
+                >
+                  Cancel Edit ✕
+                </button>
+              )}
+            </div>
 
             <div>
               <label className="block text-gray-400 mb-1">Certificate Title</label>
@@ -822,14 +1139,14 @@ function LoginAndAdmin({ onNavigate }) {
                 onFileChange={handleCertFileChange}
                 onClear={clearCertFile}
                 urlValue={certFilePreview ? '' : newCert.certImage}
-                onUrlChange={(val) => setNewCert(prev => ({ ...prev, certImage: val, certFile: '' }))}
+                onUrlChange={(val) => { setNewCert(prev => ({ ...prev, certImage: val, certFile: '' })); setCertFilePreview(val); }}
                 accentColor="indigo"
               />
             </div>
 
             <div className="md:col-span-2 pt-2">
               <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all uppercase tracking-wider">
-                Verify and Store Certificate Node
+                {editingCertificate ? 'Save Certificate Changes' : 'Verify and Store Certificate Node'}
               </button>
             </div>
           </form>
@@ -863,12 +1180,39 @@ function LoginAndAdmin({ onNavigate }) {
                           <p className="text-[10px] text-purple-400 font-medium">{c.issuer} • {c.date}</p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteCertificate(c.id)}
-                        className="bg-rose-950/40 border border-rose-900/60 text-rose-400 hover:bg-rose-900/60 text-xs font-bold px-2 py-1.5 rounded-lg transition-colors shrink-0"
-                      >
-                        Delete ×
-                      </button>
+                      <div className="flex gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCertificate(c);
+                            setNewCert({
+                              title: c.title,
+                              issuer: c.issuer,
+                              date: c.date,
+                              skillTag: c.skillTag || '',
+                              certImage: c.certImage || '',
+                              certFile: c.certFile || '',
+                              certFileName: c.certFileName || '',
+                              certMime: c.certMime || ''
+                            });
+                            setCertFilePreview(c.certFile || c.certImage || '');
+                            setCertFileName(c.certFileName || '');
+                            setCertFileMime(c.certMime || '');
+                            toast.info(`Editing certificate: "${c.title}"`);
+                            document.getElementById('certificates')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className="bg-indigo-950/40 border border-indigo-900/60 text-indigo-400 hover:bg-indigo-900/60 text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+                        >
+                          Edit 📝
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCertificate(c.id)}
+                          className="bg-rose-950/40 border border-rose-900/60 text-rose-400 hover:bg-rose-900/60 text-xs font-bold px-2 py-1.5 rounded-lg transition-colors"
+                        >
+                          Delete ×
+                        </button>
+                      </div>
                     </div>
                   );
                 })

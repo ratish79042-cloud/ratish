@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { db } from './firebaseConfig';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { API_BASE } from './config';
 
 const Portfolio = ({ onNavigate }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeNav, setActiveNav] = useState('home');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Firebase loaded flags - ஒவ்வொரு collection-க்கும் தனியா track பண்றோம்
   const [loadedFlags, setLoadedFlags] = useState({
@@ -68,69 +68,99 @@ const Portfolio = ({ onNavigate }) => {
     setLoadedFlags(prev => ({ ...prev, [key]: true }));
 
   useEffect(() => {
+    
     // Profile
-    const unsubProfile = onSnapshot(
-      doc(db, 'meta', 'profile'),
-      (snap) => {
-        if (snap.exists()) setProfile(prev => ({ ...prev, ...snap.data() }));
+    fetch(`${API_BASE}/profile`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setProfile(data);
         markLoaded('profile');
-      },
-      () => markLoaded('profile')
-    );
+      })
+      .catch(() => markLoaded('profile'));
 
     // Projects
-    const unsubProjects = onSnapshot(
-      collection(db, 'projects'),
-      (snap) => {
-        setDbProjects(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    fetch(`${API_BASE}/projects`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setDbProjects(data);
         markLoaded('projects');
-      },
-      () => markLoaded('projects')
-    );
+      })
+      .catch(() => markLoaded('projects'));
 
     // Certificates
-    const unsubCerts = onSnapshot(
-      collection(db, 'certificates'),
-      (snap) => {
-        setDbCerts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    fetch(`${API_BASE}/certificates`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setDbCerts(data);
         markLoaded('certs');
-      },
-      () => markLoaded('certs')
-    );
+      })
+      .catch(() => markLoaded('certs'));
 
     // Frontend skills
-    const unsubFE = onSnapshot(
-      collection(db, 'skills_frontend'),
-      (snap) => {
-        setDbSkillsFrontend(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    fetch(`${API_BASE}/skills/frontend`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setDbSkillsFrontend(data);
         markLoaded('frontend');
-      },
-      () => markLoaded('frontend')
-    );
+      })
+      .catch(() => markLoaded('frontend'));
 
     // Tools
-    const unsubTools = onSnapshot(
-      collection(db, 'skills_tools'),
-      (snap) => {
-        setDbSkillsTools(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    fetch(`${API_BASE}/skills/tools`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setDbSkillsTools(data);
         markLoaded('tools');
-      },
-      () => markLoaded('tools')
-    );
+      })
+      .catch(() => markLoaded('tools'));
 
     // Others
-    const unsubOthers = onSnapshot(
-      collection(db, 'skills_others'),
-      (snap) => {
-        setDbSkillsOthers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    fetch(`${API_BASE}/skills/others`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setDbSkillsOthers(data);
         markLoaded('others');
-      },
-      () => markLoaded('others')
-    );
+      })
+      .catch(() => markLoaded('others'));
+  }, []);
+
+  // ScrollSpy implementation: updates the active navbar link as the user scrolls
+  useEffect(() => {
+    const sections = ['home', 'about', 'skills', 'projects', 'certificates', 'contact'];
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-30% 0px -40% 0px',
+      threshold: 0.15
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveNav(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    // Fallback: highlight the last section (Contact) when scrolled to the very bottom
+    const handleScroll = () => {
+      const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 50;
+      if (isAtBottom) {
+        setActiveNav('contact');
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
 
     return () => {
-      unsubProfile(); unsubProjects(); unsubCerts();
-      unsubFE(); unsubTools(); unsubOthers();
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -175,8 +205,10 @@ const Portfolio = ({ onNavigate }) => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#030014]/80 backdrop-blur-xl border-b border-purple-900/20 px-6 lg:px-16 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-lg text-white">
           <span className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></span>
-          Portfolio
+          G T Ratish-Portfolio
         </div>
+
+        {/* Desktop Navigation Links */}
         <div className="hidden md:flex items-center gap-8 text-sm font-medium">
           {navLinks.map(link => (
             <button
@@ -188,13 +220,59 @@ const Portfolio = ({ onNavigate }) => {
             </button>
           ))}
         </div>
+
         <div className="flex items-center gap-3">
-          <button onClick={() => onNavigate && onNavigate('#/admin')} className="text-gray-400 hover:text-white text-lg transition-colors">🌙</button>
-          <button onClick={() => scrollTo('Contact')} className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-5 py-2 rounded-full transition-all flex items-center gap-2">
+          <button onClick={() => onNavigate && onNavigate('#/admin')} className="text-gray-400 hover:text-white text-lg transition-colors mr-1">🌙</button>
+
+          <button onClick={() => scrollTo('Contact')} className="hidden sm:flex bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-5 py-2 rounded-full transition-all flex items-center gap-2">
             Let's Talk <span>✈️</span>
+          </button>
+
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden text-gray-400 hover:text-white p-1 transition-colors focus:outline-none"
+            aria-label="Toggle Menu"
+          >
+            {isMobileMenuOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
           </button>
         </div>
       </nav>
+
+      {/* Mobile Menu Dropdown Panel */}
+      {isMobileMenuOpen && (
+        <div className="fixed top-[68px] left-0 right-0 z-40 bg-[#030014]/95 backdrop-blur-2xl border-b border-purple-900/30 px-6 py-6 flex flex-col gap-4 md:hidden transition-all duration-300 ease-in-out">
+          {navLinks.map(link => (
+            <button
+              key={link}
+              onClick={() => {
+                scrollTo(link);
+                setIsMobileMenuOpen(false);
+              }}
+              className={`text-left py-2 text-base font-semibold transition-colors ${activeNav === link.toLowerCase() ? 'text-purple-400 border-l-2 border-purple-400 pl-3' : 'text-gray-400 pl-3 hover:text-white'}`}
+            >
+              {link}
+            </button>
+          ))}
+          <button
+            onClick={() => {
+              scrollTo('Contact');
+              setIsMobileMenuOpen(false);
+            }}
+            className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-3 rounded-xl transition-all text-center mt-2 flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30"
+          >
+            Let's Talk <span>✈️</span>
+          </button>
+        </div>
+      )}
 
       {/* ── HERO SECTION ── */}
       <section id="home" className="min-h-screen flex items-center pt-20 px-6 lg:px-16 relative overflow-hidden">
@@ -533,25 +611,25 @@ const Portfolio = ({ onNavigate }) => {
                   </div>
                 </div>
                 <button
-  onClick={() => {
-    const fileToOpen = c.certFile || c.certImage || c.certUrl || null;
-    if (fileToOpen) {
-      const win = window.open();
-      if (win) {
-        if (fileToOpen.startsWith('data:')) {
-          win.document.write(
-            `<iframe src="${fileToOpen}" style="width:100%;height:100vh;border:none;"></iframe>`
-          );
-        } else {
-          win.location.href = fileToOpen;
-        }
-      }
-    }
-  }}
-  className="shrink-0 bg-[#120933]/60 border border-purple-500/20 hover:border-purple-500 text-gray-300 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1 hover:shadow-[0_0_12px_rgba(168,85,247,0.2)]"
->
-  Verify 🔗
-</button>
+                  onClick={() => {
+                    const fileToOpen = c.certFile || c.certImage || c.certUrl || null;
+                    if (fileToOpen) {
+                      const win = window.open();
+                      if (win) {
+                        if (fileToOpen.startsWith('data:')) {
+                          win.document.write(
+                            `<iframe src="${fileToOpen}" style="width:100%;height:100vh;border:none;"></iframe>`
+                          );
+                        } else {
+                          win.location.href = fileToOpen;
+                        }
+                      }
+                    }
+                  }}
+                  className="shrink-0 bg-[#120933]/60 border border-purple-500/20 hover:border-purple-500 text-gray-300 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1 hover:shadow-[0_0_12px_rgba(168,85,247,0.2)]"
+                >
+                  Verify 🔗
+                </button>
               </div>
             ))}
           </div>
@@ -631,7 +709,7 @@ const Portfolio = ({ onNavigate }) => {
               </a>
             </div>
           </div>
-        </div>    
+        </div>
 
         {/* Footer */}
         <div className="max-w-7xl mx-auto mt-24 pt-8 border-t border-purple-900/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-gray-600 text-xs">
